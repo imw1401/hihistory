@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="ko" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>역사 수행평가 점수 확인</title>
+  <!-- Tailwind CSS 로드 -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <!-- Lucide 아이콘 로드 -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <style>
+    html, body { height: 100%; width: 100%; margin: 0; }
+    body { overflow: hidden; box-sizing: border-box; }
+    
+    /* 배경 디자인 */
+    .soft-grain {
+      background-image:
+        radial-gradient(circle at 12% 18%, rgba(255, 214, 165, 0.72) 0 12%, transparent 25%),
+        radial-gradient(circle at 86% 20%, rgba(255, 151, 112, 0.34) 0 10%, transparent 27%),
+        radial-gradient(circle at 72% 86%, rgba(120, 73, 54, 0.16) 0 13%, transparent 29%),
+        linear-gradient(135deg, #fff3df 0%, #ffe1c2 48%, #f8b88b 100%);
+    }
+    
+    .paper-card { box-shadow: 0 24px 70px rgba(113, 63, 38, 0.18); }
+    .warm-focus:focus { outline: 3px solid rgba(188, 93, 45, 0.35); outline-offset: 3px; }
+    
+    /* 애니메이션 */
+    .fade-in { animation: fadeIn 0.65s ease both; }
+    .rise-in { animation: riseIn 0.75s ease both; }
+    .delay-1 { animation-delay: 0.08s; }
+    .delay-2 { animation-delay: 0.16s; }
+    
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes riseIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+    
+    /* 스크롤바 커스텀 */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #fffaf2; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb { background: #e6b48a; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #bc5d2d; }
+  </style>
+</head>
+<body class="h-full w-full font-sans">
+  <div id="appWrapper" class="soft-grain h-full w-full overflow-auto text-[#4a2b1d]">
+    
+    <!-- 상단 헤더 -->
+    <header class="w-full px-5 pt-6 md:px-10 md:pt-8">
+      <div class="mx-auto flex max-w-6xl items-center justify-between gap-4">
+        <div class="flex items-center gap-3 fade-in">
+          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#bc5d2d] text-[#fffaf2] shadow-lg shadow-orange-900/10">
+            <i data-lucide="landmark" aria-hidden="true"></i>
+          </div>
+          <div>
+            <p class="text-sm font-bold tracking-[0.18em] text-[#bc5d2d]">HISTORY CLASS</p>
+            <p class="text-xs text-[#7d4b34]">수행평가 점수 조회</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="toggleTeacherBtn" type="button" class="warm-focus rounded-full border border-[#e6b48a] bg-[#fffaf2]/80 px-4 py-2 text-sm font-bold text-[#7d4b34] transition hover:bg-[#fffaf2]"> 교사용 모드 </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="w-full px-5 pb-8 pt-6 md:px-10">
+      <section class="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+        
+        <!-- 좌측: 학생용 점수 조회 패널 -->
+        <article class="paper-card rise-in rounded-[2rem] border border-[#fff2df] bg-[#fffaf2]/90 p-6 md:p-8">
+          <div class="mb-7">
+            <div class="mb-4 inline-flex items-center gap-2 rounded-full bg-[#ffe5ca] px-4 py-2 text-sm font-bold text-[#bc5d2d]">
+              <i data-lucide="sparkles" class="h-4 w-4" aria-hidden="true"></i> <span id="displayBadgeTitle">역사 수행평가</span>
+            </div>
+            <h1 class="mb-3 text-3xl font-black leading-tight text-[#4a2b1d] md:text-5xl">내 점수 확인하기</h1>
+            <p class="max-w-2xl text-base leading-relaxed text-[#7d4b34] md:text-lg">학번, 이름, 비밀번호를 입력하면 점수를 확인할 수 있어요.</p>
+          </div>
+
+          <!-- 학생 조회 폼 -->
+          <div id="lookupView" class="space-y-4">
+            <form id="lookupForm" class="space-y-4" autocomplete="off">
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label for="lookupStudentId" class="mb-2 block text-sm font-extrabold text-[#4a2b1d]">학번</label> 
+                  <input id="lookupStudentId" type="text" inputmode="numeric" class="warm-focus w-full rounded-2xl border border-[#e6b48a] bg-white px-4 py-3 text-[#4a2b1d]" placeholder="예: 20315" required>
+                </div>
+                <div>
+                  <label for="lookupStudentName" class="mb-2 block text-sm font-extrabold text-[#4a2b1d]">이름</label> 
+                  <input id="lookupStudentName" type="text" class="warm-focus w-full rounded-2xl border border-[#e6b48a] bg-white px-4 py-3 text-[#4a2b1d]" placeholder="예: 김역사" required>
+                </div>
+              </div>
+              <div>
+                <label for="lookupPassword" class="mb-2 block text-sm font-extrabold text-[#4a2b1d]">비밀번호</label> 
+                <input id="lookupPassword" type="password" class="warm-focus w-full rounded-2xl border border-[#e6b48a] bg-white px-4 py-3 text-[#4a2b1d]" placeholder="학생 비밀번호 (초기: 0000)" required>
+              </div>
+              <button type="submit" class="warm-focus flex w-full items-center justify-center gap-2 rounded-2xl bg-[#bc5d2d] px-5 py-4 font-black text-[#fffaf2] transition hover:-translate-y-0.5 hover:bg-[#a84f24]"> 
+                <i data-lucide="search" class="h-5 w-5" aria-hidden="true"></i> 점수 조회
+              </button>
+            </form>
+          </div>
+
+          <!-- 결과 확인 패널 -->
+          <div id="resultPanel" class="mt-6 hidden rounded-[1.5rem] border border-[#e6b48a] bg-white p-5">
+            <div class="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <p class="text-sm font-bold text-[#bc5d2d]">조회 완료</p>
+                <h2 id="resultName" class="mt-1 text-2xl font-black text-[#4a2b1d]">학생 이름</h2>
+                <p id="resultClass" class="mt-1 text-sm text-[#7d4b34]"></p>
+              </div>
+              <div class="rounded-2xl bg-[#ffe5ca] px-4 py-3 text-center min-w-[80px]">
+                <p class="text-xs font-bold text-[#7d4b34]">총점</p>
+                <p id="totalScore" class="text-2xl font-black text-[#bc5d2d]">0</p>
+              </div>
+            </div>
+            
+            <div id="scoreCardsContainer" class="grid gap-4 md:grid-cols-3"></div>
+            
+            <div class="mt-5 rounded-2xl bg-[#fffaf2] px-4 py-3 border border-[#ffe5ca]">
+              <p class="text-xs font-bold text-[#bc5d2d] mb-1">선생님의 피드백(메모)</p>
+              <p id="resultMemo" class="text-sm leading-relaxed text-[#7d4b34]"></p>
+            </div>
+            
+            <button id="backBtn" class="mt-5 w-full rounded-xl bg-[#e6b48a]/30 border border-[#e6b48a] py-3 text-[#4a2b1d] font-bold transition hover:bg-[#ffe5ca]">다른 학생 조회하기</button>
+          </div>
+        </article>
+
+        <!-- 우측: 학년별 항목 안내 및 교사용 패널 -->
+        <aside class="space-y-6">
+          <section class="paper-card rise-in delay-1 rounded-[2rem] border border-[#fff2df] bg-[#fffaf2]/80 p-6">
+            <h2 class="mb-4 flex items-center gap-2 text-xl font-black text-[#4a2b1d]"><i data-lucide="clipboard-list" class="h-5 w-5 text-[#bc5d2d]"></i> 학년별 평가 항목</h2>
+            <div id="gradeItemsDisplay" class="space-y-4 text-sm text-[#7d4b34] bg-white p-4 rounded-xl border border-[#e6b48a]"></div>
+          </section>
+
+          <!-- 교사 관리 패널 -->
+          <section id="teacherPanel" class="paper-card rise-in delay-2 hidden rounded-[2rem] border border-[#fff2df] bg-[#fffaf2]/90 p-6">
+            
+            <div id="teacherLoginView" class="mb-2">
+              <h2 class="mb-4 flex items-center gap-2 text-xl font-black text-[#4a2b1d]"><i data-lucide="lock" class="h-5 w-5 text-[#bc5d2d]"></i> 교사 인증</h2>
+              <form id="loginForm" class="space-y-4" autocomplete="off">
+                <input id="teacherPassword" type="password" class="warm-focus w-full rounded-xl border border-[#e6b48a] bg-white px-4 py-3" placeholder="비밀번호 입력 (기본: teacher123)" required>
+                <button type="submit" class="warm-focus w-full rounded-xl bg-[#bc5d2d] py-3 font-black text-[#fffaf2] transition hover:bg-[#a84f24]">관리자 모드 접속</button>
+              </form>
+            </div>
+
+            <div id="teacherContentView" class="hidden space-y-5">
+              <div class="flex justify-between items-center">
+                <h2 class="text-xl font-black text-[#4a2b1d]"><i data-lucide="pencil-line" class="inline-block h-5 w-5 text-[#bc5d2d]"></i> 교사 관리 기능</h2>
+                <span id="recordCountBadge" class="text-xs bg-[#ffe5ca] text-[#bc5d2d] font-bold px-2 py-1 rounded-lg">등록: 0명</span>
+              </div>
+              
+              <!-- ⚙️ 1. 수행평가 명칭 및 항목 설정 -->
+              <details class="rounded-xl border border-[#e6b48a] bg-white p-4 transition">
+                <summary class="cursor-pointer font-black text-[#4a2b1d] flex items-center justify-between text-sm">
+                  <span class="flex items-center gap-2"><i data-lucide="settings" class="h-4 w-4 text-[#bc5d2d]"></i> 수행평가 이름/항목 설정</span>
+                  <span class="text-xs text-[#bc5d2d] font-bold">열기/닫기</span>
+                </summary>
+                <form id="configForm" class="mt-4 space-y-3 pt-3 border-t border-[#ffe5ca]" autocomplete="off">
+                  <div>
+                    <label class="block text-xs font-extrabold text-[#bc5d2d] mb-1">대표 수행평가 명칭</label>
+                    <input id="cfgMainTitle" type="text" class="warm-focus w-full rounded-lg border border-[#e6b48a] px-3 py-2 text-xs" required>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-extrabold text-[#bc5d2d] mb-1">📘 2학년 평가 항목 (3개)</label>
+                    <div class="grid grid-cols-3 gap-2">
+                      <input id="cfgG2_1" type="text" class="warm-focus w-full rounded-lg border border-[#e6b48a] px-2 py-1.5 text-xs" required>
+                      <input id="cfgG2_2" type="text" class="warm-focus w-full rounded-lg border border-[#e6b48a] px-2 py-1.5 text-xs" required>
+                      <input id="cfgG2_3" type="text" class="warm-focus w-full rounded-lg border border-[#e6b48a] px-2 py-1.5 text-xs" required>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-extrabold text-[#bc5d2d] mb-1">📗 3학년 평가 항목 (3개)</label>
+                    <div class="grid grid-cols-3 gap-2">
+                      <input id="cfgG3_1" type="text" class="warm-focus w-full rounded-lg border border-[#e6b48a] px-2 py-1.5 text-xs" required>
+                      <input id="cfgG3_2" type="text" class="warm-focus w-full rounded-lg border border-[#e6b48a] px-2 py-1.5 text-xs" required>
+                      <input id="cfgG3_3" type="text" class="warm-focus w-full rounded-lg border border-[#e6b48a] px-2 py-1.5 text-xs" required>
+                    </div>
+                  </div>
+                  <button type="submit" class="w-full rounded-lg bg-[#bc5d2d] py-2 text-xs font-black text-[#fffaf2] transition hover:bg-[#a84f24]">설정 내용 저장</button>
+                </form>
+              </details>
+
+              <!-- 📝 2. 35인 일괄 입력 표 -->
+              <details class="rounded-xl border border-[#e6b48a] bg-white p-4 transition" open>
+                <summary class="cursor-pointer font-black text-[#4a2b1d] flex items-center justify-between text-sm">
+                  <span class="flex items-center gap-2"><i data-lucide="table" class="h-4 w-4 text-[#bc5d2d]"></i> 점수 일괄 입력 (1~35번)</span>
+                  <span class="text-xs text-[#bc5d2d] font-bold">열기/닫기</span>
+                </summary>
+                <div class="mt-4 space-y-3 pt-3 border-t border-[#ffe5ca]">
+                  <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                    <div class="rounded-lg bg-[#fffaf2] p-2 text-xs leading-relaxed text-[#7d4b34] flex-1 border border-[#e6b48a]">
+                      <span class="font-bold text-[#bc5d2d]">💡 엑셀 팁:</span> 엑셀 데이터 복사 후 <strong>1번 학번 칸</strong>에 <code>Ctrl + V</code>
+                    </div>
+                    <select id="bulkGradeSelect" class="warm-focus rounded-lg border border-[#e6b48a] bg-[#ffe5ca] px-3 py-2 text-xs font-extrabold text-[#bc5d2d] outline-none cursor-pointer">
+                      <option value="2">📘 2학년 양식</option>
+                      <option value="3">📗 3학년 양식</option>
+                    </select>
+                  </div>
+
+                  <div class="overflow-x-auto max-h-[300px] overflow-y-auto border border-[#e6b48a] rounded-lg">
+                    <table class="w-full text-xs text-center border-collapse whitespace-nowrap" id="bulkTable">
+                      <thead class="bg-[#ffe5ca] text-[#bc5d2d] sticky top-0 z-10 shadow-sm">
+                        <tr>
+                          <th class="p-2 border-b border-r border-[#e6b48a] font-black min-w-[40px]">순번</th>
+                          <th class="p-2 border-b border-r border-[#e6b48a] font-black min-w-[70px]">학번</th>
+                          <th class="p-2 border-b border-r border-[#e6b48a] font-black min-w-[70px]">이름</th>
+                          <th id="thScore1" class="p-2 border-b border-r border-[#e6b48a] font-black min-w-[80px]">점수 1</th>
+                          <th id="thScore2" class="p-2 border-b border-r border-[#e6b48a] font-black min-w-[80px]">점수 2</th>
+                          <th id="thScore3" class="p-2 border-b border-r border-[#e6b48a] font-black min-w-[80px]">점수 3</th>
+                          <th class="p-2 border-b border-r border-[#e6b48a] font-black min-w-[120px]">피드백(메모)</th>
+                          <th class="p-2 border-b border-[#e6b48a] font-black min-w-[60px]">상태</th>
+                        </tr>
+                      </thead>
+                      <tbody id="bulkTableBody"></tbody>
+                    </table>
+                  </div>
+                  <button type="button" id="bulkSaveBtn" class="w-full rounded-lg bg-[#bc5d2d] py-3 text-sm font-black text-[#fffaf2] transition hover:bg-[#a84f24]">표에 작성된 데이터 일괄 저장하기</button>
+                </div>
+              </details>
+
+              <!-- 🔑 3. 비밀번호 초기화 관리 -->
+              <details class="rounded-xl border border-[#e6b48a] bg-white p-4 transition">
+                <summary class="cursor-pointer font-black text-[#4a2b1d] flex items-center justify-between text-sm">
+                  <span class="flex items-center gap-2"><i data-lucide="key" class="h-4 w-4 text-[#bc5d2d]"></i> 학생 비밀번호 초기화</span>
+                  <span class="text-xs text-[#bc5d2d] font-bold">열기/닫기</span>
+                </summary>
+                <div class="mt-4 space-y-3 pt-3 border-t border-[#ffe5ca]">
+                  <p class="text-xs text-[#7d4b34] leading-relaxed">
+                    비밀번호를 까먹은 학생의 학번을 입력하여 <strong>0000</strong>으로 빠르게 초기화하거나, 아래 목록에서 해당 학생의 비밀번호를 바로 초기화할 수 있습니다.
+                  </p>
+                  
+                  <div class="flex gap-2">
+                    <input id="resetStudentId" type="text" placeholder="학번 입력 (예: 20101)" class="warm-focus flex-1 rounded-lg border border-[#e6b48a] px-3 py-2 text-xs">
+                    <button type="button" id="resetPasswordBtn" class="rounded-lg bg-[#bc5d2d] px-4 py-2 text-xs font-black text-[#fffaf2] transition hover:bg-[#a84f24]">0000으로 초기화</button>
+                  </div>
+
+                  <!-- 등록된 학생 비밀번호 관리 목록 -->
+                  <div class="mt-3 max-h-[220px] overflow-y-auto border border-[#e6b48a] rounded-lg">
+                    <table class="w-full text-xs text-center border-collapse">
+                      <thead class="bg-[#ffe5ca] text-[#bc5d2d] sticky top-0">
+                        <tr>
+                          <th class="p-2 border-b border-r border-[#e6b48a] font-black">학번</th>
+                          <th class="p-2 border-b border-r border-[#e6b48a] font-black">이름</th>
+                          <th class="p-2 border-b border-r border-[#e6b48a] font-black">현재 비밀번호</th>
+                          <th class="p-2 border-b border-[#e6b48a] font-black">초기화 Action</th>
+                        </tr>
+                      </thead>
+                      <tbody id="studentPwTableBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </details>
+
+              <button id="logoutButton" class="w-full rounded-lg border border-[#e6b48a] py-3 text-[#7d4b34] font-bold bg-[#fffaf2] hover:bg-[#ffe5ca] transition">관리자 모드 로그아웃</button>
+            </div>
+          </section>
+        </aside>
+      </section>
+    </main>
+
+    <!-- 토스트 알림 메시지 -->
+    <div id="toast" class="fixed bottom-5 left-1/2 z-50 max-w-[90%] -translate-x-1/2 translate-y-10 rounded-full bg-[#4a2b1d] px-5 py-3 text-sm font-bold text-[#fffaf2] opacity-0 shadow-2xl transition duration-300 pointer-events-none">알림</div>
+  </div>
+
+  <script>
+    // 📌 [선생님 전용] 학생 점수 데이터 목록
+    const defaultRecords = [
+      { studentId: "20101", studentName: "김역사", password: "0000", score1: 20, score2: 25, score3: 30, memo: "역사적 사고력이 매우 뛰어남." },
+      { studentId: "20102", studentName: "이세종", password: "0000", score1: 18, score2: 22, score3: 28, memo: "발표 참여 태도가 우수함." },
+      { studentId: "30101", studentName: "박문화", password: "0000", score1: 30, score2: 30, score3: 29, memo: "문화유산 홍보 리플렛 완벽함." }
+    ];
+
+    const defaultAssessmentNames = {
+      "2": ["인물 보고서", "역사신문", "학습지 포트폴리오"],
+      "3": ["문화유산 홍보하기", "드라마 기획안 만들기", "풍자화 만들기"]
+    };
+    
+    let mainAssessmentTitle = localStorage.getItem("historyMainTitle") || "역사 수행평가";
+    let assessmentNames = JSON.parse(localStorage.getItem("historyAssessmentNames")) || defaultAssessmentNames;
+    let records = JSON.parse(localStorage.getItem("historyScores")) || defaultRecords;
+
+    function updateBulkTableHeaders() {
+      const grade = document.getElementById("bulkGradeSelect").value;
+      const names = assessmentNames[grade];
+      document.getElementById("thScore1").textContent = names[0];
+      document.getElementById("thScore2").textContent = names[1];
+      document.getElementById("thScore3").textContent = names[2];
+    }
+
+    function renderStudentPwTable() {
+      const tbody = document.getElementById("studentPwTableBody");
+      if (!records || records.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-gray-400">등록된 학생 데이터가 없습니다.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = records.map(r => `
+        <tr class="border-b border-[#ffe5ca] hover:bg-[#fffaf2] transition-colors">
+          <td class="p-2 border-r border-[#e6b48a] font-bold text-[#7d4b34]">${r.studentId}</td>
+          <td class="p-2 border-r border-[#e6b48a] text-[#4a2b1d]">${r.studentName}</td>
+          <td class="p-2 border-r border-[#e6b48a] font-mono font-bold text-[#bc5d2d]">${r.password || '0000'}</td>
+          <td class="p-1">
+            <button type="button" onclick="resetPwByStudentId('${r.studentId}')" class="px-2 py-1 bg-[#ffe5ca] hover:bg-[#e6b48a] text-[#bc5d2d] font-bold rounded text-[11px] transition">
+              0000 초기화
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderUI() {
+      document.getElementById("displayBadgeTitle").textContent = mainAssessmentTitle;
+      
+      const displayContainer = document.getElementById("gradeItemsDisplay");
+      displayContainer.innerHTML = `
+        <div>
+          <p class="font-black text-[#bc5d2d] mb-1">📘 2학년</p>
+          <p>1. ${assessmentNames["2"][0]} &nbsp; 2. ${assessmentNames["2"][1]} &nbsp; 3. ${assessmentNames["2"][2]}</p>
+        </div>
+        <hr class="border-[#ffe5ca]">
+        <div>
+          <p class="font-black text-[#bc5d2d] mb-1">📗 3학년</p>
+          <p>1. ${assessmentNames["3"][0]} &nbsp; 2. ${assessmentNames["3"][1]} &nbsp; 3. ${assessmentNames["3"][2]}</p>
+        </div>
+      `;
+
+      document.getElementById("cfgMainTitle").value = mainAssessmentTitle;
+      document.getElementById("cfgG2_1").value = assessmentNames["2"][0];
+      document.getElementById("cfgG2_2").value = assessmentNames["2"][1];
+      document.getElementById("cfgG2_3").value = assessmentNames["2"][2];
+      document.getElementById("cfgG3_1").value = assessmentNames["3"][0];
+      document.getElementById("cfgG3_2").value = assessmentNames["3"][1];
+      document.getElementById("cfgG3_3").value = assessmentNames["3"][2];
+
+      updateBulkTableHeaders();
+      renderStudentPwTable();
+      lucide.createIcons();
+    }
+
+    renderUI();
+    document.getElementById("bulkGradeSelect").addEventListener("change", updateBulkTableHeaders);
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.remove("translate-y-10", "opacity-0");
+      setTimeout(() => toast.classList.add("translate-y-10", "opacity-0"), 3000);
+    }
+    
+    function updateRecordCount() {
+      const badge = document.getElementById("recordCountBadge");
+      if(badge) badge.textContent = `등록: ${records.length}명`;
+    }
+
+    // 35인 일괄 입력 표 생성
+    const bulkTableBody = document.getElementById("bulkTableBody");
+    for (let i = 1; i <= 35; i++) {
+      bulkTableBody.innerHTML += `
+        <tr class="hover:bg-[#fffaf2] transition-colors border-b border-[#ffe5ca]">
+          <td class="p-1 border-r border-[#e6b48a] font-black text-[#7d4b34] bg-[#fffaf2]">${i}</td>
+          <td class="p-0 border-r border-[#e6b48a]"><input type="text" class="w-full p-2 text-center outline-none bg-transparent focus:bg-white" data-row="${i}" data-col="0" placeholder="학번"></td>
+          <td class="p-0 border-r border-[#e6b48a]"><input type="text" class="w-full p-2 text-center outline-none bg-transparent focus:bg-white" data-row="${i}" data-col="1" placeholder="이름"></td>
+          <td class="p-0 border-r border-[#e6b48a]"><input type="number" class="w-full p-2 text-center outline-none bg-transparent focus:bg-white" data-row="${i}" data-col="2"></td>
+          <td class="p-0 border-r border-[#e6b48a]"><input type="number" class="w-full p-2 text-center outline-none bg-transparent focus:bg-white" data-row="${i}" data-col="3"></td>
+          <td class="p-0 border-r border-[#e6b48a]"><input type="number" class="w-full p-2 text-center outline-none bg-transparent focus:bg-white" data-row="${i}" data-col="4"></td>
+          <td class="p-0 border-r border-[#e6b48a]"><input type="text" class="w-full p-2 text-left outline-none bg-transparent focus:bg-white" data-row="${i}" data-col="5" placeholder="피드백 입력"></td>
+          <td class="p-1 text-center align-middle">
+            <span id="status-${i}" class="hidden inline-block rounded bg-green-100 px-2 py-1 text-[11px] font-extrabold text-green-700">✅ 완료</span>
+          </td>
+        </tr>
+      `;
+    }
+
+    // 엑셀 붙여넣기 기능
+    document.getElementById('bulkTable').addEventListener('paste', function (e) {
+      e.preventDefault();
+      const clipboardData = e.clipboardData || window.clipboardData;
+      const rows = clipboardData.getData('Text').split(/\r?\n/);
+      const targetCell = e.target;
+      
+      if (!targetCell.hasAttribute('data-row')) return;
+      
+      const startRow = parseInt(targetCell.getAttribute('data-row'));
+      const startCol = parseInt(targetCell.getAttribute('data-col'));
+      
+      document.querySelectorAll('[id^="status-"]').forEach(el => el.classList.add('hidden'));
+
+      rows.forEach((row, rowIndex) => {
+        if (!row.trim()) return;
+        row.split('\t').forEach((colData, colIndex) => {
+          const input = document.querySelector(`input[data-row="${startRow + rowIndex}"][data-col="${startCol + colIndex}"]`);
+          if (input) input.value = colData.trim();
+        });
+      });
+      showToast("데이터가 붙여넣기 되었습니다. [일괄 저장] 버튼을 눌러주세요.");
+    });
+
+    // 일괄 저장 (기존 비밀번호가 있을 경우 안전하게 유지)
+    document.getElementById("bulkSaveBtn").addEventListener("click", () => {
+      let savedCount = 0;
+      document.querySelectorAll('[id^="status-"]').forEach(el => el.classList.add('hidden'));
+
+      for (let i = 1; i <= 35; i++) {
+        const sId = document.querySelector(`input[data-row="${i}"][data-col="0"]`).value.trim();
+        const sName = document.querySelector(`input[data-row="${i}"][data-col="1"]`).value.trim();
+        const s1 = document.querySelector(`input[data-row="${i}"][data-col="2"]`).value;
+        const s2 = document.querySelector(`input[data-row="${i}"][data-col="3"]`).value;
+        const s3 = document.querySelector(`input[data-row="${i}"][data-col="4"]`).value;
+        const memo = document.querySelector(`input[data-row="${i}"][data-col="5"]`).value.trim();
+        
+        if (sId && sName) {
+          const existingIndex = records.findIndex(r => r.studentId === sId);
+          const currentPassword = (existingIndex !== -1 && records[existingIndex].password) ? records[existingIndex].password : "0000";
+
+          const studentObj = {
+            studentId: sId,
+            studentName: sName,
+            password: currentPassword,
+            score1: s1 === "" ? 0 : Number(s1),
+            score2: s2 === "" ? 0 : Number(s2),
+            score3: s3 === "" ? 0 : Number(s3),
+            memo: memo
+          };
+
+          if (existingIndex !== -1) {
+            records[existingIndex] = studentObj;
+          } else {
+            records.push(studentObj);
+          }
+          savedCount++;
+          document.getElementById(`status-${i}`).classList.remove('hidden');
+        }
+      }
+      
+      localStorage.setItem("historyScores", JSON.stringify(records));
+      updateRecordCount();
+      renderStudentPwTable();
+      showToast(`총 ${savedCount}명의 점수와 피드백이 저장되었습니다!`);
+    });
+
+    // 비밀번호 초기화 로직 (학번 검색)
+    document.getElementById("resetPasswordBtn").addEventListener("click", () => {
+      const sId = document.getElementById("resetStudentId").value.trim();
+      if (!sId) {
+        showToast("초기화할 학번을 입력해주세요.");
+        return;
+      }
+      resetPwByStudentId(sId);
+      document.getElementById("resetStudentId").value = "";
+    });
+
+    // 특정 학번 비밀번호 0000으로 초기화 함수
+    window.resetPwByStudentId = function(sId) {
+      const student = records.find(r => r.studentId === sId);
+      if (!student) {
+        showToast("해당 학번의 학생을 찾을 수 없습니다.");
+        return;
+      }
+      student.password = "0000";
+      localStorage.setItem("historyScores", JSON.stringify(records));
+      renderStudentPwTable();
+      showToast(`${student.studentName}(${sId}) 학생의 비밀번호가 0000으로 초기화되었습니다.`);
+    };
+
+    // 교사 모드 토글 및 로그인
+    document.getElementById("toggleTeacherBtn").addEventListener("click", () => {
+      document.getElementById("teacherPanel").classList.toggle("hidden");
+    });
+
+    document.getElementById("loginForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (document.getElementById("teacherPassword").value === "teacher123") {
+        document.getElementById("teacherLoginView").classList.add("hidden");
+        document.getElementById("teacherContentView").classList.remove("hidden");
+        updateRecordCount();
+        renderStudentPwTable();
+        showToast("교사 모드로 접속되었습니다.");
+      } else {
+        showToast("비밀번호가 틀렸습니다.");
+      }
+    });
+
+    document.getElementById("logoutButton").addEventListener("click", () => {
+      document.getElementById("teacherLoginView").classList.remove("hidden");
+      document.getElementById("teacherContentView").classList.add("hidden");
+      document.getElementById("teacherPassword").value = "";
+    });
+
+    // 수행평가 설정 변경
+    document.getElementById("configForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      mainAssessmentTitle = document.getElementById("cfgMainTitle").value.trim();
+      assessmentNames["2"] = [
+        document.getElementById("cfgG2_1").value.trim(),
+        document.getElementById("cfgG2_2").value.trim(),
+        document.getElementById("cfgG2_3").value.trim()
+      ];
+      assessmentNames["3"] = [
+        document.getElementById("cfgG3_1").value.trim(),
+        document.getElementById("cfgG3_2").value.trim(),
+        document.getElementById("cfgG3_3").value.trim()
+      ];
+
+      localStorage.setItem("historyMainTitle", mainAssessmentTitle);
+      localStorage.setItem("historyAssessmentNames", JSON.stringify(assessmentNames));
+      renderUI();
+      showToast("수행평가 이름 및 항목이 변경되었습니다.");
+    });
+
+    // 학생 조회 로직
+    document.getElementById("lookupForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const sId = document.getElementById("lookupStudentId").value.trim();
+      const sName = document.getElementById("lookupStudentName").value.trim();
+      const sPw = document.getElementById("lookupPassword").value.trim();
+
+      const student = records.find(r => r.studentId === sId && r.studentName === sName);
+
+      if (!student) {
+        showToast("등록된 학생 정보가 없습니다. 학번과 이름을 확인해주세요.");
+        return;
+      }
+      if (student.password !== sPw) {
+        showToast("비밀번호가 일치하지 않습니다. (초기: 0000)");
+        return;
+      }
+
+      const grade = sId.charAt(0);
+      const items = assessmentNames[grade];
+
+      if (!items) {
+        showToast("올바른 학년 정보가 아닙니다.");
+        return;
+      }
+
+      document.getElementById("resultName").textContent = `${student.studentName} 학생`;
+      document.getElementById("resultClass").textContent = `${sId.substring(0,1)}학년 ${sId.substring(1,3)}반 ${sId.substring(3)}번`;
+      document.getElementById("totalScore").textContent = student.score1 + student.score2 + student.score3;
+      
+      const scores = [student.score1, student.score2, student.score3];
+      document.getElementById("scoreCardsContainer").innerHTML = items.map((item, idx) => `
+        <div class="rounded-xl border border-[#e6b48a] bg-[#fffaf2] p-4 text-center shadow-sm">
+          <p class="text-sm font-bold text-[#7d4b34] mb-2">${item}</p>
+          <p class="text-2xl font-black text-[#bc5d2d]">${scores[idx]}<span class="text-sm text-[#7d4b34] font-normal ml-1">점</span></p>
+        </div>
+      `).join('');
+
+      document.getElementById("resultMemo").textContent = student.memo || "선생님의 피드백이 아직 등록되지 않았습니다.";
+
+      document.getElementById("lookupView").classList.add("hidden");
+      document.getElementById("resultPanel").classList.remove("hidden");
+    });
+
+    document.getElementById("backBtn").addEventListener("click", () => {
+      document.getElementById("resultPanel").classList.add("hidden");
+      document.getElementById("lookupView").classList.remove("hidden");
+      document.getElementById("lookupForm").reset();
+    });
+  </script>
+</body>
+</html>
